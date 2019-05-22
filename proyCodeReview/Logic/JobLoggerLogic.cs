@@ -29,7 +29,7 @@ namespace proyCodeReview.Logic
             _logToConsole = bool.Parse(ConfigurationManager.AppSettings["Config_logToConsole"]);
         }
 
-        public string LogMessage(string pSMessage, LogType pLogType)
+        public string LogMessage(string pSMessage, LogType pELogType)
         {
             try
             {
@@ -40,14 +40,14 @@ namespace proyCodeReview.Logic
                 int logType;
                 string dirTypeLog;
 
-                switch (pLogType)
+                switch (pELogType)
                 {
                     case LogType.Message:
                         if (_logMessage)
                         {
                             logType = 1;
                             dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeMessage"];
-                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                            return WriteLog(pSMessage, logType, dirTypeLog, pELogType);
                         }
                         break;
                     case LogType.Error:
@@ -55,7 +55,7 @@ namespace proyCodeReview.Logic
                         {
                             logType = 2;
                             dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeError"];
-                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                            return WriteLog(pSMessage, logType, dirTypeLog, pELogType);
                         }
                         break;
                     case LogType.Warning:
@@ -63,7 +63,7 @@ namespace proyCodeReview.Logic
                         {
                             logType = 3;
                             dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeWarning"];
-                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                            return WriteLog(pSMessage, logType, dirTypeLog, pELogType);
                         }
                         break;
                 }
@@ -75,34 +75,34 @@ namespace proyCodeReview.Logic
             }
         }
 
-        private string WriteLog(string pSMessage, int logType, string dirTypeLog, LogType pLogType)
+        private string WriteLog(string pSMessage, int pILogType, string pSDirTypeLog, LogType pELogType)
         {
             var logId = Guid.NewGuid();
             var dateFormatLog = DateTime.UtcNow.ToString("yyyyMMdd HH:mm:ss");
 
-            pSMessage = dateFormatLog + " - " + logId + " - " + pSMessage + " - " + pLogType;
+            pSMessage = dateFormatLog + " - " + logId + " - " + pELogType + " - " + pSMessage;
 
             if (_logToDatabase)
             {
-                WriteLogToDataBase(pSMessage, logType);
+                WriteLogToDataBase(pSMessage, pILogType);
             }
 
             if (_logToFile)
             {
-                WriteLogToFile(pSMessage, dirTypeLog);
+                WriteLogToFile(pSMessage, pSDirTypeLog);
             }
 
             if (_logToConsole)
             {
-                WriteLogToConsole(pSMessage, pLogType);
+                WriteLogToConsole(pSMessage, pELogType);
             }
 
             return logId.ToString();
         }
 
-        private void WriteLogToConsole(string pSMessage, LogType pLogType)
+        private void WriteLogToConsole(string pSMessage, LogType pELogType)
         {
-            switch (pLogType)
+            switch (pELogType)
             {
                 case LogType.Message:
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -117,14 +117,14 @@ namespace proyCodeReview.Logic
             Console.WriteLine(pSMessage);
         }
 
-        private void WriteLogToFile(string pSMessage, string dirTypeLog)
+        private void WriteLogToFile(string pSMessage, string oSDirTypeLog)
         {
             var dateFormatFileName = DateTime.UtcNow.ToString("yyyyMMdd");
             string dataMessage = null;
-            var fileName = dirTypeLog + "LogFile_" + dateFormatFileName + ".txt";
-            if (!System.IO.Directory.Exists(dirTypeLog))
+            var fileName = oSDirTypeLog + "LogFile_" + dateFormatFileName + ".txt";
+            if (!System.IO.Directory.Exists(oSDirTypeLog))
             {
-                System.IO.Directory.CreateDirectory(dirTypeLog);
+                System.IO.Directory.CreateDirectory(oSDirTypeLog);
             }
             if (System.IO.File.Exists(fileName))
             {
@@ -134,13 +134,13 @@ namespace proyCodeReview.Logic
             System.IO.File.WriteAllText(fileName, dataMessage);
         }
 
-        private void WriteLogToDataBase(string pSMessage, int logType)
+        private void WriteLogToDataBase(string pSMessage, int pILogType)
         {
             using (var connection = new System.Data.SqlClient.SqlConnection(ConfigurationManager.AppSettings["ConnectionString"]))
             {
                 connection.Open();
                 var messageLogDateBase = pSMessage;
-                var command = new System.Data.SqlClient.SqlCommand("Insert into Log (column1, column2) Values('" + messageLogDateBase + "', " + logType + ")");
+                var command = new System.Data.SqlClient.SqlCommand("Insert into Log (column1, column2) Values('" + messageLogDateBase + "', " + pILogType + ")");
                 command.ExecuteNonQuery();
             }
         }

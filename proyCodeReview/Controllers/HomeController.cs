@@ -1,7 +1,8 @@
-﻿using System.Web.Mvc;
+﻿using System;
+using System.Web.Mvc;
 using proyCodeReview.Logic;
 
-namespace PruebaBelatrix.Controllers
+namespace proyCodeReview.Controllers
 {
     public class HomeController : Controller
     {
@@ -9,28 +10,48 @@ namespace PruebaBelatrix.Controllers
 
         public ActionResult Index()
         {
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Message);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Error);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Warning);
+            try
+            {
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Message);
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Warning);
+            }
+            catch (Exception ex)
+            {
+                _oJobLogger.LogMessage(ex.Message, JobLoggerLogic.LogType.Error);
+            }
+
             return View();
         }
 
         public ActionResult About()
         {
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Message);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Error);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Warning);
-            ViewBag.Message = "Your application description page.";
+            try
+            {
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Message);
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Warning);
+                ViewBag.Message = "Your application description page.";
+            }
+            catch (Exception ex)
+            {
+                _oJobLogger.LogMessage(ex.Message, JobLoggerLogic.LogType.Error);
+            }
 
             return View();
         }
 
         public ActionResult Contact()
         {
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Message);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Error);
-            _oJobLogger.LogMessage(GetType().Name, JobLoggerLogic.LogType.Warning);
-            ViewBag.Message = "Your contact page.";
+            try
+            {
+                var data = "/".Split('-')[12].ToCharArray();
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Message);
+                _oJobLogger.LogMessage(GetType().Name + "/" + System.Reflection.MethodBase.GetCurrentMethod().Name, JobLoggerLogic.LogType.Warning);
+                ViewBag.Message = "Your contact page.";
+            }
+            catch (Exception ex)
+            {
+                _oJobLogger.LogMessage(ex.Message, JobLoggerLogic.LogType.Error);
+            }
 
             return View();
         }
