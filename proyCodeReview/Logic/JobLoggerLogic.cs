@@ -1,100 +1,148 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+using System.Configuration;
 
 namespace proyCodeReview.Logic
 {
     public class JobLoggerLogic
     {
-        private static bool _logToFile;
-        private static bool _logToConsole;
-        private static bool _logMessage;
-        private static bool _logWarning;
-        private static bool _logError;
-        private static bool LogToDatabase;
-        private bool _initialized;
-
-        public JobLogger(bool logToFile, bool logToConsole, bool logToDatabase, bool logMessage, bool logWarning, bool logError)
+        public enum LogType
         {
-            _logError = logError;
-            _logMessage = logMessage;
-            _logWarning = logWarning;
-            LogToDatabase = logToDatabase;
-            _logToFile = logToFile;
-            _logToConsole = logToConsole;
+            Message,
+            Warning,
+            Error
         }
 
-        public static void LogMessage(string message, bool message, bool warning, bool error)
+        private readonly bool _logToFile;
+        private readonly bool _logToConsole;
+        private readonly bool _logMessage;
+        private readonly bool _logWarning;
+        private readonly bool _logError;
+        private readonly bool _logToDatabase;
+
+        public JobLoggerLogic()
         {
-            message.Trim();
-            if (message == null || message.Length == 0)
-            {
-                return;
+            _logError = bool.Parse(ConfigurationManager.AppSettings["Config_logError"]);
+            _logMessage = bool.Parse(ConfigurationManager.AppSettings["Config_logMessage"]);
+            _logWarning = bool.Parse(ConfigurationManager.AppSettings["Config_logWarning"]);
+            _logToDatabase = bool.Parse(ConfigurationManager.AppSettings["Config_logToDatabase"]);
+            _logToFile = bool.Parse(ConfigurationManager.AppSettings["Config_logToFile"]);
+            _logToConsole = bool.Parse(ConfigurationManager.AppSettings["Config_logToConsole"]);
+        }
 
-            }
-            if (!_logToConsole && !_logToFile && !LogToDatabase)
+        public string LogMessage(string pSMessage, LogType pLogType)
+        {
+            try
             {
-                throw new Exception("Invalid configuration");
+                if (string.IsNullOrEmpty(pSMessage)) return "-1";
+
+                pSMessage = pSMessage.Trim();
+
+                int logType;
+                string dirTypeLog;
+
+                switch (pLogType)
+                {
+                    case LogType.Message:
+                        if (_logMessage)
+                        {
+                            logType = 1;
+                            dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeMessage"];
+                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                        }
+                        break;
+                    case LogType.Error:
+                        if (_logError)
+                        {
+                            logType = 2;
+                            dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeError"];
+                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                        }
+                        break;
+                    case LogType.Warning:
+                        if (_logWarning)
+                        {
+                            logType = 3;
+                            dirTypeLog = ConfigurationManager.AppSettings["LogFileDirectoryTypeWarning"];
+                            return WriteLog(pSMessage, logType, dirTypeLog, pLogType);
+                        }
+                        break;
+                }
+                return "-1";
             }
-            if ((!_logError && !_logMessage && !_logWarning) || (!message && !warning
-            && !error))
+            catch (Exception)
             {
-                throw new Exception("Error or Warning or Message must be specified");
+                return "-1";
             }
-            System.Data.SqlClient.SqlConnection connection = new
-            System.Data.SqlClient.SqlConnection(System.Configuration.ConfigurationManager.AppSettings["ConnectionString"]);
-            connection.Open();
-            int t;
-            if (message && _logMessage)
+        }
+
+        private string WriteLog(string pSMessage, int logType, string dirTypeLog, LogType pLogType)
+        {
+            var logId = Guid.NewGuid();
+            var dateFormatLog = DateTime.UtcNow.ToString("yyyyMMdd HH:mm:ss");
+
+            pSMessage = dateFormatLog + " - " + logId + " - " + pSMessage + " - " + pLogType;
+
+            if (_logToDatabase)
             {
-                t = 1;
-            }
-            if (error && _logError)
-            {
-                t = 2;
-            }
-            if (warning && _logWarning)
-            {
-                t = 3;
-            }
-            System.Data.SqlClient.SqlCommand command = new
-            System.Data.SqlClient.SqlCommand("Insert into Log Values('" + message + "', " + t.ToString() + ")");
-            command.ExecuteNonQuery();
-            string l;
-            if
-            (!System.IO.File.Exists(System.Configuration.ConfigurationManager.AppSettings["LogFileDirectory"] + "LogFile" + DateTime.Now.ToShortDateString() + ".txt"))
-            {
-                l = System.IO.File.ReadAllText(System.Configuration.ConfigurationManager.AppSettings["LogFileDirectory"] + "LogFile" + DateTime.Now.ToShortDateString() + ".txt");
-            }
-            if (error && _logError)
-            {
-                l = l + DateTime.Now.ToShortDateString() + message;
-            }
-            if (warning && _logWarning)
-            {
-                l = l + DateTime.Now.ToShortDateString() + message;
-            }
-            if (message && _logMessage)
-            {
-                l = l + DateTime.Now.ToShortDateString() + message;
+                WriteLogToDataBase(pSMessage, logType);
             }
 
-            System.IO.File.WriteAllText(System.Configuration.ConfigurationManager.AppSettings["LogFileDirectory"] + "LogFile" + DateTime.Now.ToShortDateString() + ".txt", l);
+            if (_logToFile)
+            {
+                WriteLogToFile(pSMessage, dirTypeLog);
+            }
 
-            if (error && _logError)
+            if (_logToConsole)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                WriteLogToConsole(pSMessage, pLogType);
             }
-            if (warning && _logWarning)
+
+            return logId.ToString();
+        }
+
+        private void WriteLogToConsole(string pSMessage, LogType pLogType)
+        {
+            switch (pLogType)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                case LogType.Message:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case LogType.Error:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case LogType.Warning:
+                    Console.ForegroundColor = ConsoleColor.White;
+                    break;
             }
-            if (message && _logMessage)
+            Console.WriteLine(pSMessage);
+        }
+
+        private void WriteLogToFile(string pSMessage, string dirTypeLog)
+        {
+            var dateFormatFileName = DateTime.UtcNow.ToString("yyyyMMdd");
+            string dataMessage = null;
+            var fileName = dirTypeLog + "LogFile_" + dateFormatFileName + ".txt";
+            if (!System.IO.Directory.Exists(dirTypeLog))
             {
-                Console.ForegroundColor = ConsoleColor.White;
+                System.IO.Directory.CreateDirectory(dirTypeLog);
             }
-            Console.WriteLine(DateTime.Now.ToShortDateString() + message);
+            if (System.IO.File.Exists(fileName))
+            {
+                dataMessage = System.IO.File.ReadAllText(fileName);
+            }
+            dataMessage = dataMessage + pSMessage + '\n';
+            System.IO.File.WriteAllText(fileName, dataMessage);
+        }
+
+        private void WriteLogToDataBase(string pSMessage, int logType)
+        {
+            using (var connection = new System.Data.SqlClient.SqlConnection(ConfigurationManager.AppSettings["ConnectionString"]))
+            {
+                connection.Open();
+                var messageLogDateBase = pSMessage;
+                var command = new System.Data.SqlClient.SqlCommand("Insert into Log (column1, column2) Values('" + messageLogDateBase + "', " + logType + ")");
+                command.ExecuteNonQuery();
+            }
         }
     }
 }
